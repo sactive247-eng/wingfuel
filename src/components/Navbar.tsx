@@ -69,13 +69,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </a>
 
-          {/* Zone 2: Navigation Links (Single-Line whitespace-nowrap) */}
-          <nav className="hidden xl:flex items-center gap-3 text-xs font-semibold text-slate-600 dark:text-slate-300">
+          {/* Zone 2: Navigation Links (Shows on 2xl / 1536px+ screens to prevent navbar row overflow on 1280px-1440px laptops) */}
+          <nav className="hidden 2xl:flex items-center gap-3 text-xs font-semibold text-slate-600 dark:text-slate-300">
             {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => onNavigate(item.id)}
-                className={`whitespace-nowrap shrink-0 transition-colors py-1 px-1 border-b-2 ${
+                className={`whitespace-nowrap shrink-0 transition-colors py-1 px-1.5 border-b-2 ${
                   currentView === item.id
                     ? 'text-orange-500 border-orange-500 font-bold'
                     : 'border-transparent hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-700'
@@ -91,10 +91,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Global Search Bar Input Trigger */}
             <button
               onClick={onOpenSearch}
-              className="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 hover:border-orange-500/50 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 text-xs font-medium flex items-center gap-1.5 transition-all group"
+              className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 hover:border-orange-500/50 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 text-xs font-medium flex items-center gap-1.5 transition-all group"
             >
               <Search className="w-3.5 h-3.5 text-orange-500 group-hover:scale-110 transition-transform" />
-              <span className="hidden lg:inline">Search</span>
+              <span>Search</span>
               <kbd className="hidden lg:inline bg-slate-200 dark:bg-slate-950 text-slate-500 px-1 py-0.2 rounded text-[9px] font-mono border border-slate-300 dark:border-slate-800">⌘K</kbd>
             </button>
 
@@ -124,11 +124,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Gemini AI Visuals Button */}
             <button
               onClick={onOpenAiImageModal}
-              className="px-2 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center gap-1 transition-colors shrink-0"
+              className="px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center gap-1 transition-colors shrink-0"
               title="Generate Aviation Visuals with Gemini 3 Pro"
             >
               <Sparkles className="w-3.5 h-3.5 text-orange-500" />
-              <span className="hidden lg:inline">AI Studio</span>
+              <span className="hidden sm:inline">AI Studio</span>
             </button>
 
             {currentUser ? (
@@ -138,7 +138,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   className="px-2.5 py-1.5 text-xs font-bold text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-950/60 border border-orange-300 dark:border-orange-800/60 rounded-lg flex items-center gap-1"
                 >
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  <span className="hidden lg:inline">{currentUser.displayName || 'Account'}</span>
+                  <span>{currentUser.displayName || 'Account'}</span>
                 </button>
                 <button
                   onClick={() => signOut(auth)}
@@ -152,7 +152,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={() => onOpenUserAuth('signup')}
-                  className="px-3 py-1.5 text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-lg shadow-sm transition-all flex items-center gap-1"
+                  className="px-3.5 py-1.5 text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-lg shadow-sm transition-all flex items-center gap-1"
                 >
                   <UserIcon className="w-3.5 h-3.5" />
                   <span>Sign Up</span>
@@ -168,27 +168,14 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </div>
 
-          {/* Mobile Action Controls */}
-          <div className="flex items-center gap-1 md:hidden shrink-0">
-            <button
-              onClick={onOpenSearch}
-              className="p-1.5 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900"
-              title="Search"
-            >
-              <Search className="w-4 h-4 text-orange-500" />
-            </button>
-            <button
-              onClick={onToggleTheme}
-              className="p-1.5 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900"
-              title="Toggle Theme"
-            >
-              {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
-            </button>
+          {/* Mobile / Tablet Menu Button (Triggers full menu on screens under 2xl) */}
+          <div className="flex items-center gap-1 2xl:hidden shrink-0">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900"
+              className="p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900 flex items-center gap-1.5 font-semibold text-xs border border-slate-200 dark:border-slate-800"
             >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5 text-orange-500" />}
+              <span className="hidden sm:inline font-bold">Menu</span>
             </button>
           </div>
         </div>
