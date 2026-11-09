@@ -42,35 +42,35 @@ export const Navbar: React.FC<NavbarProps> = ({
   ];
 
   return (
-    <header className="sticky top-0 z-40 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/80 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between gap-6 h-16">
+    <header className="sticky top-0 z-40 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/80 transition-colors w-full overflow-hidden">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between gap-2 sm:gap-4 h-16">
           
-          {/* Zone 1: Brand Logo - Transparent Background Rendering */}
+          {/* Zone 1: Brand Logo */}
           <a
             href="#home"
             onClick={(e) => { e.preventDefault(); onNavigate('home'); }}
-            className="flex items-center gap-3 whitespace-nowrap shrink-0 group"
+            className="flex items-center gap-2 sm:gap-3 whitespace-nowrap shrink-0 group"
           >
-            <div className="h-10 flex items-center justify-center transition-transform group-hover:scale-105">
+            <div className="h-9 flex items-center justify-center transition-transform group-hover:scale-105">
               <img
                 src="/assets/aistudio/WingFuel_Orbit_Logo_e3f91314.png"
                 alt="WingFuel.co Logo"
-                className="h-8 w-auto object-contain mix-blend-multiply dark:bg-white/90 dark:px-2 dark:py-1 dark:rounded-lg dark:mix-blend-normal shadow-sm transition-all"
+                className="h-7 sm:h-8 w-auto object-contain mix-blend-multiply dark:bg-white/90 dark:px-2 dark:py-1 dark:rounded-lg dark:mix-blend-normal shadow-sm transition-all"
               />
             </div>
-            <div className="hidden sm:block">
-              <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-white block">
+            <div className="hidden min-[400px]:block">
+              <span className="text-xs sm:text-sm font-bold tracking-tight text-slate-900 dark:text-white block">
                 WingFuel<span className="text-orange-500">.co</span>
               </span>
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 tracking-wider uppercase font-semibold">
+              <span className="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 tracking-wider uppercase font-semibold hidden md:block">
                 Fuel Your Aviation Knowledge
               </span>
             </div>
           </a>
 
           {/* Zone 2: Navigation Links (Single-Line whitespace-nowrap) */}
-          <nav className="hidden xl:flex items-center gap-4 text-xs font-semibold text-slate-600 dark:text-slate-300">
+          <nav className="hidden xl:flex items-center gap-3 text-xs font-semibold text-slate-600 dark:text-slate-300">
             {navItems.map((item) => (
               <button
                 key={item.id}
@@ -87,21 +87,21 @@ export const Navbar: React.FC<NavbarProps> = ({
           </nav>
 
           {/* Zone 3: Primary Actions, Search, Theme Toggle & User Auth */}
-          <div className="hidden sm:flex items-center gap-2 shrink-0">
+          <div className="hidden md:flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Global Search Bar Input Trigger */}
             <button
               onClick={onOpenSearch}
-              className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 hover:border-orange-500/50 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 text-xs font-medium flex items-center gap-2 transition-all group"
+              className="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 hover:border-orange-500/50 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 text-xs font-medium flex items-center gap-1.5 transition-all group"
             >
               <Search className="w-3.5 h-3.5 text-orange-500 group-hover:scale-110 transition-transform" />
-              <span className="hidden md:inline">Search...</span>
-              <kbd className="hidden md:inline bg-slate-200 dark:bg-slate-950 text-slate-500 px-1 py-0.2 rounded text-[10px] font-mono border border-slate-300 dark:border-slate-800">⌘K</kbd>
+              <span className="hidden lg:inline">Search</span>
+              <kbd className="hidden lg:inline bg-slate-200 dark:bg-slate-950 text-slate-500 px-1 py-0.2 rounded text-[9px] font-mono border border-slate-300 dark:border-slate-800">⌘K</kbd>
             </button>
 
             {/* Notification Bell Button */}
             <button
               onClick={onOpenNotifications}
-              className="p-1.5 text-slate-600 hover:text-orange-500 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-lg transition-colors relative"
+              className="p-1.5 text-slate-600 hover:text-orange-500 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-lg transition-colors relative shrink-0"
               title="Category Alert Preferences"
             >
               <Bell className="w-4 h-4" />
@@ -111,7 +111,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Light / Dark Mode Toggle */}
             <button
               onClick={onToggleTheme}
-              className="p-1.5 text-slate-600 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-lg transition-colors"
+              className="p-1.5 text-slate-600 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-lg transition-colors shrink-0"
               title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
             >
               {isDark ? (
@@ -124,21 +124,21 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Gemini AI Visuals Button */}
             <button
               onClick={onOpenAiImageModal}
-              className="px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center gap-1.5 transition-colors"
+              className="px-2 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center gap-1 transition-colors shrink-0"
               title="Generate Aviation Visuals with Gemini 3 Pro"
             >
               <Sparkles className="w-3.5 h-3.5 text-orange-500" />
-              <span className="hidden md:inline">AI Studio</span>
+              <span className="hidden lg:inline">AI Studio</span>
             </button>
 
             {currentUser ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   onClick={() => onNavigate('admin')}
-                  className="px-3 py-1.5 text-xs font-bold text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-950/60 border border-orange-300 dark:border-orange-800/60 rounded-lg flex items-center gap-1.5"
+                  className="px-2.5 py-1.5 text-xs font-bold text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-950/60 border border-orange-300 dark:border-orange-800/60 rounded-lg flex items-center gap-1"
                 >
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  <span className="hidden md:inline">{currentUser.displayName || 'Account'}</span>
+                  <span className="hidden lg:inline">{currentUser.displayName || 'Account'}</span>
                 </button>
                 <button
                   onClick={() => signOut(auth)}
@@ -149,17 +149,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={() => onOpenUserAuth('signup')}
-                  className="px-3.5 py-1.5 text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-lg shadow-sm transition-all flex items-center gap-1.5"
+                  className="px-3 py-1.5 text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-lg shadow-sm transition-all flex items-center gap-1"
                 >
                   <UserIcon className="w-3.5 h-3.5" />
                   <span>Sign Up</span>
                 </button>
                 <button
                   onClick={() => onOpenAdmin()}
-                  className="px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                  className="px-2 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                   title="Admin Dashboard Login"
                 >
                   Admin
@@ -169,18 +169,26 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Mobile Action Controls */}
-          <div className="flex items-center gap-2 lg:hidden">
+          <div className="flex items-center gap-1 md:hidden shrink-0">
+            <button
+              onClick={onOpenSearch}
+              className="p-1.5 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900"
+              title="Search"
+            >
+              <Search className="w-4 h-4 text-orange-500" />
+            </button>
             <button
               onClick={onToggleTheme}
-              className="p-2 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900"
+              className="p-1.5 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900"
+              title="Toggle Theme"
             >
-              {isDark ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-slate-700" />}
+              {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
             </button>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900"
+              className="p-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900"
             >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
