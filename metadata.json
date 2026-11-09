@@ -1,0 +1,6 @@
+{
+  "name": "WingFuel.co",
+  "description": "Fuel Your Aviation Knowledge - Aviation news, operational insights, ATF calculators, digital products, and professional resources for the aviation community.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

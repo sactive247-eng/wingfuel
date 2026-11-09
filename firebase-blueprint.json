@@ -1,0 +1,96 @@
+{
+  "entities": {
+    "Article": {
+      "title": "Article",
+      "description": "Aviation knowledge and ground ops articles",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "slug": { "type": "string" },
+        "category": { "type": "string" },
+        "subCategory": { "type": "string" },
+        "summary": { "type": "string" },
+        "content": { "type": "string" },
+        "author": { "type": "string" },
+        "publishedAt": { "type": "string" },
+        "status": { "type": "string", "enum": ["published", "draft"] },
+        "readTime": { "type": "string" },
+        "coverImage": { "type": "string" }
+      },
+      "required": ["title", "category", "content", "status"]
+    },
+    "News": {
+      "title": "News",
+      "description": "Aviation news item, semi-automated RSS ingestion",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "sourceUrl": { "type": "string" },
+        "sourceName": { "type": "string" },
+        "category": { "type": "string" },
+        "summary": { "type": "string" },
+        "content": { "type": "string" },
+        "publishedAt": { "type": "string" },
+        "status": { "type": "string", "enum": ["approved", "pending", "rejected"] },
+        "aiSummarized": { "type": "boolean" },
+        "coverImage": { "type": "string" }
+      },
+      "required": ["title", "sourceUrl", "category", "status"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Digital aviation product for sale in INR",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "priceINR": { "type": "number" },
+        "features": { "type": "array" },
+        "previewImage": { "type": "string" },
+        "downloadFileName": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "archived"] }
+      },
+      "required": ["title", "priceINR", "category"]
+    },
+    "Job": {
+      "title": "Job",
+      "description": "Aviation career posting",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "company": { "type": "string" },
+        "location": { "type": "string" },
+        "type": { "type": "string" },
+        "category": { "type": "string" },
+        "qualifications": { "type": "string" },
+        "applyUrl": { "type": "string" },
+        "expiryDate": { "type": "string" },
+        "status": { "type": "string", "enum": ["published", "expired", "draft"] }
+      },
+      "required": ["title", "company", "location", "applyUrl"]
+    }
+  },
+  "firestore": {
+    "/articles/{articleId}": {
+      "schema": { "$ref": "#/entities/Article" },
+      "description": "Aviation knowledge articles"
+    },
+    "/news/{newsId}": {
+      "schema": { "$ref": "#/entities/News" },
+      "description": "Aviation news collection"
+    },
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Digital products store catalog"
+    },
+    "/jobs/{jobId}": {
+      "schema": { "$ref": "#/entities/Job" },
+      "description": "Aviation job listings"
+    }
+  }
+}

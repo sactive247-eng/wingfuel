@@ -1,0 +1,69 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // Default rule: reject all unhandled paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Articles collection (Aviation Knowledge & Ops)
+    match /articles/{articleId} {
+      allow read: if resource.data.status == "published" || isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // News collection (RSS Aggregated Aviation News)
+    match /news/{newsId} {
+      allow read: if resource.data.status == "approved" || isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // News Sources collection
+    match /newsSources/{sourceId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // Digital Products collection
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // Orders collection (Razorpay payment transactions)
+    match /orders/{orderId} {
+      allow read: if isSignedIn() || (resource != null && resource.data.accessKey == request.auth.uid);
+      allow create: if true;
+      allow update, delete: if isSignedIn();
+    }
+
+    // Jobs collection
+    match /jobs/{jobId} {
+      allow read: if resource.data.status == "published" || isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // Subscribers collection
+    match /subscribers/{subscriberId} {
+      allow create: if true;
+      allow read, update, delete: if isSignedIn();
+    }
+
+    // Site Settings collection
+    match /siteSettings/{settingId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // Activity Logs collection
+    match /activityLogs/{logId} {
+      allow read, write: if isSignedIn();
+    }
+  }
+}
