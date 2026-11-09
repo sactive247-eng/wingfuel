@@ -3,28 +3,25 @@ name: Deploy to Firebase Hosting on merge
   push:
     branches:
       - main
+      - master
 
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
-          
+          cache: 'npm'
       - name: Install Dependencies
         run: npm ci
-        
-      - name: Build Web App
+      - name: Build Application
         run: npm run build
-        
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_OCEANIC_OATH_V61JG }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_WINGFUEL_1F48D }}'
           channelId: live
-          projectId: oceanic-oath-v61jg
+          projectId: wingfuel-1f48d

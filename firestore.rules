@@ -61,6 +61,13 @@ service cloud.firestore {
       allow write: if isSignedIn();
     }
 
+    // Users collection (User Profiles)
+    match /users/{userId} {
+      allow read: if true;
+      allow create, update: if isSignedIn() && request.auth.uid == userId;
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
     // Activity Logs collection
     match /activityLogs/{logId} {
       allow read, write: if isSignedIn();
