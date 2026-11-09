@@ -21,7 +21,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, articles, news, 
       <section className="relative min-h-[520px] flex items-center justify-center overflow-hidden bg-slate-950 border-b border-slate-900">
         <div className="absolute inset-0 z-0">
           <img
-            src="/src/assets/images/hero_aviation_jet_1794011579584.jpg"
+            src="https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1600&q=80"
             alt="Commercial Aircraft Refuelling Tarmac Sunset"
             className="w-full h-full object-cover opacity-35"
           />

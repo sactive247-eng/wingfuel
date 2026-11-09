@@ -86,7 +86,7 @@ $$\text{Density}_{15} = \frac{\text{Density}_{obs}}{1 + \alpha_{15} \cdot (T_{ob
     publishedAt: "2026-10-15",
     readTime: "6 min read",
     status: "published",
-    coverImage: "/src/assets/images/atf_refuelling_ops_1794011579438.jpg"
+    coverImage: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1200&q=80"
   },
   {
     id: "art-02",
@@ -114,7 +114,7 @@ Modern international airports utilize underground high-pressure fuel hydrant sys
     publishedAt: "2026-10-28",
     readTime: "8 min read",
     status: "published",
-    coverImage: "/src/assets/images/airport_operations_apron_1794011578150.jpg"
+    coverImage: "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=1200&q=80"
   },
   {
     id: "art-03",
@@ -140,7 +140,7 @@ DP must be checked and recorded daily at maximum flow rate. A sudden drop indica
     publishedAt: "2026-11-02",
     readTime: "5 min read",
     status: "published",
-    coverImage: "/src/assets/images/aviation_knowledge_hub_1794011580342.jpg"
+    coverImage: "https://images.unsplash.com/photo-1506015391300-4802dc74de2e?auto=format&fit=crop&w=1200&q=80"
   }
 ];
 
@@ -156,7 +156,7 @@ export const INITIAL_NEWS: NewsItem[] = [
     publishedAt: "2026-11-05",
     status: "approved",
     aiSummarized: true,
-    coverImage: "/src/assets/images/hero_aviation_jet_1794011579584.jpg"
+    coverImage: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1200&q=80"
   },
   {
     id: "news-02",
@@ -169,7 +169,7 @@ export const INITIAL_NEWS: NewsItem[] = [
     publishedAt: "2026-11-04",
     status: "approved",
     aiSummarized: true,
-    coverImage: "/src/assets/images/atf_refuelling_ops_1794011579438.jpg"
+    coverImage: "https://images.unsplash.com/photo-1506015391300-4802dc74de2e?auto=format&fit=crop&w=1200&q=80"
   },
   {
     id: "news-03",
@@ -182,7 +182,7 @@ export const INITIAL_NEWS: NewsItem[] = [
     publishedAt: "2026-11-03",
     status: "approved",
     aiSummarized: true,
-    coverImage: "/src/assets/images/airport_operations_apron_1794011578150.jpg"
+    coverImage: "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=1200&q=80"
   }
 ];
 
@@ -200,7 +200,7 @@ export const INITIAL_PRODUCTS: DigitalProduct[] = [
       "Monthly QC Audit Summary Sheet",
       "Fully Customizable Excel (.xlsx) Format"
     ],
-    previewImage: "/src/assets/images/aviation_knowledge_hub_1794011580342.jpg",
+    previewImage: "https://images.unsplash.com/photo-1559628233-eb1b1a45564b?auto=format&fit=crop&w=1200&q=80",
     downloadFileName: "WingFuel_ATF_FuelFarm_Master_Dashboard.xlsx",
     fileSizeBytes: "2.4 MB",
     status: "active"
@@ -217,7 +217,7 @@ export const INITIAL_PRODUCTS: DigitalProduct[] = [
       "Printable PDF & Editable DOCX Formats",
       "Emergency Shut-Off Procedure Cards"
     ],
-    previewImage: "/src/assets/images/atf_refuelling_ops_1794011579438.jpg",
+    previewImage: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1200&q=80",
     downloadFileName: "WingFuel_Apron_Refuelling_Checklist_Bundle.zip",
     fileSizeBytes: "4.1 MB",
     status: "active"
@@ -234,7 +234,7 @@ export const INITIAL_PRODUCTS: DigitalProduct[] = [
       "DGCA & IATA Regulatory Overview",
       "Resume & Portfolio Sample Templates"
     ],
-    previewImage: "/src/assets/images/hero_aviation_jet_1794011579584.jpg",
+    previewImage: "https://images.unsplash.com/photo-1519074069444-1ba4edb62077?auto=format&fit=crop&w=1200&q=80",
     downloadFileName: "WingFuel_Aviation_Ops_Interview_Kit.pdf",
     fileSizeBytes: "5.8 MB",
     status: "active"
