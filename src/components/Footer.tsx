@@ -2,6 +2,13 @@ import React, { useState } from 'react';
 import { Fuel, Send, CheckCircle } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
+import { VisitorCounter } from './VisitorCounter';
+import {
+  WINGFUEL_LOGO_PATH,
+  FALLBACK_LOGO_IMAGE,
+  resolvePublicImagePath,
+  createImageErrorHandler,
+} from './SafeImage';
 
 interface FooterProps {
   onNavigate: (view: string) => void;
@@ -38,8 +45,9 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <div className="flex items-center gap-3">
               <div className="h-10 flex items-center justify-center">
                 <img
-                  src="/assets/aistudio/WingFuel_Orbit_Logo_e3f91314.png"
+                  src={resolvePublicImagePath(WINGFUEL_LOGO_PATH, FALLBACK_LOGO_IMAGE)}
                   alt="WingFuel.co Official Logo"
+                  onError={createImageErrorHandler(FALLBACK_LOGO_IMAGE)}
                   className="h-8 w-auto object-contain mix-blend-multiply dark:bg-white/90 dark:px-2 dark:py-1 dark:rounded-lg dark:mix-blend-normal shadow-sm"
                 />
               </div>
@@ -111,6 +119,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           <div>
             &copy; {new Date().getFullYear()} WingFuel.co. All Rights Reserved.
           </div>
+          <VisitorCounter />
           <div className="flex items-center gap-4">
             <button onClick={() => onNavigate('about')} className="hover:text-slate-800 dark:hover:text-slate-300">Privacy Policy</button>
             <span>&middot;</span>

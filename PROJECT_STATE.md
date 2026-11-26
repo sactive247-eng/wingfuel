@@ -18,6 +18,7 @@
 - **Firestore Database ID**: `ai-studio-33914f93-7772-4042-9bdb-353e54c71ad8`
 - **Config File**: `/firebase-applet-config.json` (contains `projectId`, `appId`, `apiKey`, `authDomain`, `firestoreDatabaseId`)
 - **Authentication**: Firebase Auth (Google Sign-In via `signInWithPopup` and Email/Password with User Profiles stored in Firestore `users/{uid}`).
+- **Admin Authorization**: Strictly restricted to verified email `sactive247@gmail.com` (and optional `/admins/{uid}` docs) both in `src/lib/firebase.ts` (`isAdminUser`) and in `firestore.rules` (`isAdmin()`). Other Google accounts are denied Admin Panel access and see a standard Member badge.
 - **Security Rules File**: `/firestore.rules` (deployed via Firebase CLI / AI Studio).
 - **Deployment CI/CD**: `.github/workflows/firebase-hosting-deploy.yml` (GitHub Actions workflow deploying to Firebase Hosting on push to `main`).
 
@@ -64,6 +65,11 @@
 ### 4.7 AdMob Integration (`/src/components/AdBanner.tsx`)
 - Google AdMob slots (`pub-2011257851590169`) embedded across key sections and mobile sticky footer anchor banner.
 
+### 4.8 Live Visitor Counter (`/src/components/VisitorCounter.tsx`)
+- Rendered in the bottom bar of `Footer.tsx`.
+- Persisted in Firestore at `/siteStats/visitors` (`count`, `updatedAt`) with real-time `onSnapshot` updates and `sessionStorage` per-session deduplication.
+- Protected by atomic `+1` increment-only rules in `firestore.rules`.
+
 ---
 
 ## 5. Repository File Structure
@@ -74,6 +80,8 @@
 │       └── firebase-hosting-deploy.yml # GitHub Actions deployment to Firebase
 ├── public/
 │   └── assets/
+│       ├── fallback-aviation.svg       # Public-root fallback placeholder image
+│       ├── fallback-logo.svg           # Public-root fallback logo placeholder
 │       └── aistudio/
 │           └── WingFuel_Orbit_Logo_e3f91314.png # Transparent WingFuel logo
 ├── src/
@@ -85,7 +93,9 @@
 │   │   ├── Navbar.tsx                  # Sticky header, logo, theme toggle, auth
 │   │   ├── NotificationSettingsModal.tsx # Alert category preferences
 │   │   ├── ReadingProgressBar.tsx      # Reading scroll progress bar
-│   │   └── UserAuthModal.tsx           # Google & Email/Password Sign Up / Sign In
+│   │   ├── SafeImage.tsx               # Public-root image resolver & onError fallback helpers
+│   │   ├── UserAuthModal.tsx           # Google & Email/Password Sign Up / Sign In
+│   │   └── VisitorCounter.tsx          # Live Firestore visitor counter in footer
 │   ├── lib/
 │   │   ├── firebase.ts                 # Firebase app, auth, db initializations
 │   │   └── seedData.ts                 # Initial articles, news, products & jobs

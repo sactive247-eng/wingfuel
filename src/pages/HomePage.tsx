@@ -5,6 +5,12 @@ import {
 } from 'lucide-react';
 import { Article, NewsItem, DigitalProduct } from '../lib/seedData';
 import { AdBanner } from '../components/AdBanner';
+import {
+  DEFAULT_AVIATION_HERO_IMAGE,
+  FALLBACK_AVIATION_IMAGE,
+  resolvePublicImagePath,
+  createImageErrorHandler,
+} from '../components/SafeImage';
 
 interface HomePageProps {
   onNavigate: (view: string, id?: string) => void;
@@ -21,8 +27,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, articles, news, 
       <section className="relative min-h-[520px] flex items-center justify-center overflow-hidden bg-slate-950 border-b border-slate-900">
         <div className="absolute inset-0 z-0">
           <img
-            src="https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1600&q=80"
+            src={DEFAULT_AVIATION_HERO_IMAGE}
             alt="Commercial Aircraft Refuelling Tarmac Sunset"
+            onError={createImageErrorHandler(FALLBACK_AVIATION_IMAGE)}
             className="w-full h-full object-cover opacity-35"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-slate-950/40" />
@@ -122,8 +129,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, articles, news, 
               <div>
                 <div className="h-44 overflow-hidden relative">
                   <img
-                    src={item.coverImage || "/src/assets/images/hero_aviation_jet_1794011579584.jpg"}
+                    src={resolvePublicImagePath(item.coverImage, DEFAULT_AVIATION_HERO_IMAGE)}
                     alt={item.title}
+                    onError={createImageErrorHandler(FALLBACK_AVIATION_IMAGE)}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                   <span className="absolute top-3 left-3 bg-slate-950/90 border border-slate-700 text-orange-400 text-[10px] font-bold px-2 py-0.5 rounded">

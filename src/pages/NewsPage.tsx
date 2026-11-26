@@ -3,6 +3,12 @@ import { Newspaper, Search, Sparkles, ExternalLink, Filter, Calendar, Bookmark }
 import { NewsItem } from '../lib/seedData';
 import { AdBanner } from '../components/AdBanner';
 import { useBookmarks } from '../lib/bookmarks';
+import {
+  DEFAULT_AVIATION_HERO_IMAGE,
+  FALLBACK_AVIATION_IMAGE,
+  resolvePublicImagePath,
+  createImageErrorHandler,
+} from '../components/SafeImage';
 
 interface NewsPageProps {
   news: NewsItem[];
@@ -113,8 +119,9 @@ export const NewsPage: React.FC<NewsPageProps> = ({ news }) => {
                 <div>
                   <div className="h-48 relative overflow-hidden">
                     <img
-                      src={item.coverImage || "/src/assets/images/hero_aviation_jet_1794011579584.jpg"}
+                      src={resolvePublicImagePath(item.coverImage, DEFAULT_AVIATION_HERO_IMAGE)}
                       alt={item.title}
+                      onError={createImageErrorHandler(FALLBACK_AVIATION_IMAGE)}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                     <div className="absolute top-3 left-3 flex items-center gap-2">
@@ -189,7 +196,12 @@ export const NewsPage: React.FC<NewsPageProps> = ({ news }) => {
             <h2 className="text-xl font-bold text-white leading-tight">{activeNewsModal.title}</h2>
 
             {activeNewsModal.coverImage && (
-              <img src={activeNewsModal.coverImage} alt={activeNewsModal.title} className="w-full h-56 object-cover rounded-xl" />
+              <img
+                src={resolvePublicImagePath(activeNewsModal.coverImage, FALLBACK_AVIATION_IMAGE)}
+                alt={activeNewsModal.title}
+                onError={createImageErrorHandler(FALLBACK_AVIATION_IMAGE)}
+                className="w-full h-56 object-cover rounded-xl"
+              />
             )}
 
             {activeNewsModal.aiSummarized && (

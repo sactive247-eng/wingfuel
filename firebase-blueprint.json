@@ -73,6 +73,16 @@
         "status": { "type": "string", "enum": ["published", "expired", "draft"] }
       },
       "required": ["title", "company", "location", "applyUrl"]
+    },
+    "SiteStats": {
+      "title": "SiteStats",
+      "description": "Public site analytics counters such as total visitor count",
+      "type": "object",
+      "properties": {
+        "count": { "type": "number", "description": "Total cumulative site visits" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of last visit increment" }
+      },
+      "required": ["count", "updatedAt"]
     }
   },
   "firestore": {
@@ -91,6 +101,10 @@
     "/jobs/{jobId}": {
       "schema": { "$ref": "#/entities/Job" },
       "description": "Aviation job listings"
+    },
+    "/siteStats/{statId}": {
+      "schema": { "$ref": "#/entities/SiteStats" },
+      "description": "Public site-wide counters including visitors"
     }
   }
 }

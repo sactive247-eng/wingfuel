@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import { ShoppingBag, Download, ShieldCheck, Check, Lock, Loader2, Sparkles } from 'lucide-react';
 import { DigitalProduct } from '../lib/seedData';
 import { AdBanner } from '../components/AdBanner';
+import {
+  FALLBACK_AVIATION_IMAGE,
+  resolvePublicImagePath,
+  createImageErrorHandler,
+} from '../components/SafeImage';
 
 interface ProductsPageProps {
   products: DigitalProduct[];
@@ -88,8 +93,9 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ products }) => {
             <div>
               <div className="h-48 relative overflow-hidden bg-slate-950">
                 <img
-                  src={prod.previewImage}
+                  src={resolvePublicImagePath(prod.previewImage, FALLBACK_AVIATION_IMAGE)}
                   alt={prod.title}
+                  onError={createImageErrorHandler(FALLBACK_AVIATION_IMAGE)}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
                 <span className="absolute top-3 left-3 bg-slate-950/90 text-orange-400 text-[10px] font-bold px-2.5 py-1 rounded border border-slate-800">

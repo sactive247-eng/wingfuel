@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 48" width="180" height="48">
+  <rect width="180" height="48" rx="10" fill="#0f172a" />
+  <path d="M18 28 L42 16 L34 28 L40 34 L29 31 L24 38 L24 29 Z" fill="#f97316" />
+  <text x="52" y="31" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="800">Wing<tspan fill="#f97316">Fuel</tspan></text>
+</svg>

@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import { Fuel, ShieldCheck, Sparkles, Menu, X, User as UserIcon, LogOut, Search, Bell, Sun, Moon } from 'lucide-react';
-import { auth, signOut, User } from '../lib/firebase';
+import { auth, signOut, isAdminUser, User } from '../lib/firebase';
+import {
+  WINGFUEL_LOGO_PATH,
+  FALLBACK_LOGO_IMAGE,
+  resolvePublicImagePath,
+  createImageErrorHandler,
+} from './SafeImage';
 
 interface NavbarProps {
   currentView: string;
@@ -28,6 +34,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentUser
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isAdmin = isAdminUser(currentUser);
 
   const navItems = [
     { id: 'home', label: 'Home' },
@@ -54,8 +61,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <div className="h-9 flex items-center justify-center transition-transform group-hover:scale-105">
               <img
-                src="/assets/aistudio/WingFuel_Orbit_Logo_e3f91314.png"
+                src={resolvePublicImagePath(WINGFUEL_LOGO_PATH, FALLBACK_LOGO_IMAGE)}
                 alt="WingFuel.co Logo"
+                onError={createImageErrorHandler(FALLBACK_LOGO_IMAGE)}
                 className="h-7 sm:h-8 w-auto object-contain mix-blend-multiply dark:bg-white/90 dark:px-2 dark:py-1 dark:rounded-lg dark:mix-blend-normal shadow-sm transition-all"
               />
             </div>
@@ -133,13 +141,20 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {currentUser ? (
               <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  onClick={() => onNavigate('admin')}
-                  className="px-2.5 py-1.5 text-xs font-bold text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-950/60 border border-orange-300 dark:border-orange-800/60 rounded-lg flex items-center gap-1"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>{currentUser.displayName || 'Account'}</span>
-                </button>
+                {isAdmin ? (
+                  <button
+                    onClick={() => onNavigate('admin')}
+                    className="px-2.5 py-1.5 text-xs font-bold text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-950/60 border border-orange-300 dark:border-orange-800/60 rounded-lg flex items-center gap-1"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Admin Panel</span>
+                  </button>
+                ) : (
+                  <span className="px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center gap-1.5 max-w-[140px]">
+                    <UserIcon className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                    <span className="truncate">{currentUser.displayName || currentUser.email || 'Member'}</span>
+                  </span>
+                )}
                 <button
                   onClick={() => signOut(auth)}
                   className="p-1.5 text-slate-500 hover:text-rose-500 transition-colors"
@@ -224,12 +239,26 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               </div>
             ) : (
-              <button
-                onClick={() => { onNavigate('admin'); setMobileMenuOpen(false); }}
-                className="w-full py-2 bg-orange-950 text-orange-400 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5"
-              >
-                <ShieldCheck className="w-4 h-4" /> Admin Dashboard
-              </button>
+              <div className="flex flex-col gap-2">
+                {isAdmin ? (
+                  <button
+                    onClick={() => { onNavigate('admin'); setMobileMenuOpen(false); }}
+                    className="w-full py-2 bg-orange-950 text-orange-400 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5"
+                  >
+                    <ShieldCheck className="w-4 h-4" /> Admin Dashboard
+                  </button>
+                ) : (
+                  <div className="w-full py-2 px-3 bg-slate-100 dark:bg-slate-950 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg text-center border border-slate-200 dark:border-slate-800 truncate">
+                    Signed in as {currentUser.displayName || currentUser.email}
+                  </div>
+                )}
+                <button
+                  onClick={() => { signOut(auth); setMobileMenuOpen(false); }}
+                  className="w-full py-2 bg-rose-500/10 text-rose-500 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 border border-rose-500/30"
+                >
+                  <LogOut className="w-4 h-4" /> Sign Out
+                </button>
+              </div>
             )}
           </div>
         </div>

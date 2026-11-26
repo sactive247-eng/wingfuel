@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import { Sparkles, Image as ImageIcon, Download, X, Loader2 } from 'lucide-react';
 import { GoogleGenAI } from '@google/genai';
+import {
+  DEFAULT_AVIATION_HERO_IMAGE,
+  FALLBACK_AVIATION_IMAGE,
+  resolvePublicImagePath,
+  createImageErrorHandler,
+} from './SafeImage';
 
 interface GeminiImageGenModalProps {
   isOpen: boolean;
@@ -40,17 +46,17 @@ export const GeminiImageGenModal: React.FC<GeminiImageGenModalProps> = ({ isOpen
           setGeneratedImageUrl(`data:${mime};base64,${data}`);
         } else {
           // Fallback demo image path generated for the app
-          setGeneratedImageUrl('/src/assets/images/hero_aviation_jet_1794011579584.jpg');
+          setGeneratedImageUrl(DEFAULT_AVIATION_HERO_IMAGE);
         }
       } else {
         // High quality preview generator
-        setGeneratedImageUrl('/src/assets/images/hero_aviation_jet_1794011579584.jpg');
+        setGeneratedImageUrl(DEFAULT_AVIATION_HERO_IMAGE);
       }
     } catch (err: any) {
       console.error('Gemini image generation error:', err);
       // Clean error presentation
       setError(err.message || 'Image generation failed. Using default high-res preview.');
-      setGeneratedImageUrl('/src/assets/images/hero_aviation_jet_1794011579584.jpg');
+      setGeneratedImageUrl(DEFAULT_AVIATION_HERO_IMAGE);
     } finally {
       setLoading(false);
     }
@@ -153,8 +159,9 @@ export const GeminiImageGenModal: React.FC<GeminiImageGenModalProps> = ({ isOpen
           {generatedImageUrl && (
             <div className="mt-4 border border-slate-800 rounded-xl overflow-hidden bg-slate-950 p-2 text-center">
               <img 
-                src={generatedImageUrl} 
+                src={resolvePublicImagePath(generatedImageUrl, FALLBACK_AVIATION_IMAGE)} 
                 alt="Generated Aviation Asset" 
+                onError={createImageErrorHandler(FALLBACK_AVIATION_IMAGE)}
                 className="w-full h-56 object-cover rounded-lg"
               />
               <div className="mt-3 flex items-center justify-between text-xs px-2 text-slate-400">

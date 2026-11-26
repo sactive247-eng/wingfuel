@@ -4,6 +4,11 @@ import { Article } from '../lib/seedData';
 import { AdBanner } from '../components/AdBanner';
 import { useBookmarks } from '../lib/bookmarks';
 import { ReadingProgressBar } from '../components/ReadingProgressBar';
+import {
+  FALLBACK_AVIATION_IMAGE,
+  resolvePublicImagePath,
+  createImageErrorHandler,
+} from '../components/SafeImage';
 
 interface KnowledgePageProps {
   articles: Article[];
@@ -179,7 +184,12 @@ export const KnowledgePage: React.FC<KnowledgePageProps> = ({ articles }) => {
             </div>
 
             {activeArticle.coverImage && (
-              <img src={activeArticle.coverImage} alt={activeArticle.title} className="w-full h-72 object-cover rounded-xl border border-slate-800" />
+              <img
+                src={resolvePublicImagePath(activeArticle.coverImage, FALLBACK_AVIATION_IMAGE)}
+                alt={activeArticle.title}
+                onError={createImageErrorHandler(FALLBACK_AVIATION_IMAGE)}
+                className="w-full h-72 object-cover rounded-xl border border-slate-800"
+              />
             )}
 
             {/* Editorial Reading Prose Column */}

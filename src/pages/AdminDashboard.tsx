@@ -3,8 +3,9 @@ import {
   ShieldCheck, Lock, LogOut, Check, X, Edit, Trash2, Plus, Sparkles, 
   RefreshCw, FileText, Newspaper, ShoppingBag, Briefcase, Users, Activity, Settings 
 } from 'lucide-react';
-import { auth, googleProvider, signInWithPopup, signOut, User } from '../lib/firebase';
+import { auth, googleProvider, signInWithPopup, signOut, isAdminUser, User } from '../lib/firebase';
 import { Article, NewsItem, DigitalProduct, JobListing } from '../lib/seedData';
+import { DEFAULT_AVIATION_HERO_IMAGE } from '../components/SafeImage';
 
 interface AdminDashboardProps {
   currentUser: User | null;
@@ -55,15 +56,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [newJobLocation, setNewJobLocation] = useState('');
   const [newJobApplyUrl, setNewJobApplyUrl] = useState('');
 
+  const [authError, setAuthError] = useState<string | null>(null);
   const pendingNews = news.filter((n) => n.status === 'pending');
   const approvedNews = news.filter((n) => n.status === 'approved');
+  const isAuthorizedAdmin = isAdminUser(currentUser);
 
   const handleAdminSignIn = async () => {
+    setAuthError(null);
     try {
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      if (!isAdminUser(result.user)) {
+        setAuthError(`Access denied: ${result.user.email || 'This account'} is not an authorized WingFuel administrator.`);
+      }
     } catch (err: any) {
       console.error('Admin Sign-In Error:', err);
-      alert('Sign in failed: ' + err.message);
+      setAuthError('Sign in failed: ' + (err?.message || 'Unknown error'));
     }
   };
 
@@ -121,7 +128,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       description: newProdDesc,
       priceINR: newProdPrice,
       features: ['Automated Formula Engine', 'PDF/Excel Ready', 'Single License'],
-      previewImage: '/src/assets/images/aviation_knowledge_hub_1794011580342.jpg',
+      previewImage: DEFAULT_AVIATION_HERO_IMAGE,
       downloadFileName: `WingFuel_${newProdTitle.replace(/\s+/g, '_')}.xlsx`,
       fileSizeBytes: '3.2 MB',
       status: 'active'
@@ -163,21 +170,55 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         <div>
           <h2 className="text-2xl font-black text-white">WingFuel Administrator Panel</h2>
-          <p className="text-xs text-slate-400 mt-1">Authorized single-administrator access for website content and database management.</p>
+          <p className="text-xs text-slate-400 mt-1">Authorized administrator access only for website content and database management.</p>
         </div>
 
         <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-300 text-left space-y-2">
           <div className="flex items-center gap-2 text-orange-400 font-bold">
             <ShieldCheck className="w-4 h-4" /> Protected Firestore Security Rules
           </div>
-          <p>Public visitors browse published content. Only authenticated administrator accounts can create, edit, approve RSS news, or modify products.</p>
+          <p>Public visitors and member accounts cannot access admin controls. Only verified administrator accounts are permitted.</p>
         </div>
+
+        {authError && (
+          <div className="p-3 bg-rose-950/60 border border-rose-800/70 rounded-xl text-xs text-rose-300 text-left">
+            {authError}
+          </div>
+        )}
 
         <button
           onClick={handleAdminSignIn}
           className="w-full py-3.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
         >
           <ShieldCheck className="w-4 h-4" /> Sign In with Firebase Auth (Google)
+        </button>
+      </div>
+    );
+  }
+
+  // If signed in with a non-admin account, block access strictly
+  if (!isAuthorizedAdmin) {
+    return (
+      <div className="max-w-md mx-auto my-16 p-8 bg-slate-900 border border-rose-900/60 rounded-2xl shadow-2xl space-y-6 text-center">
+        <div className="w-16 h-16 rounded-full bg-rose-950 border border-rose-500/50 text-rose-400 flex items-center justify-center mx-auto shadow-lg">
+          <Lock className="w-8 h-8" />
+        </div>
+
+        <div className="space-y-1.5">
+          <h2 className="text-2xl font-black text-white">Access Denied</h2>
+          <p className="text-xs text-slate-400">
+            Signed in as <strong className="text-slate-200">{currentUser.email || 'Unknown account'}</strong>.
+          </p>
+          <p className="text-xs text-rose-300 pt-1">
+            This Google account does not have administrator privileges for WingFuel.co.
+          </p>
+        </div>
+
+        <button
+          onClick={() => signOut(auth)}
+          className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl border border-slate-700 transition-colors flex items-center justify-center gap-2"
+        >
+          <LogOut className="w-4 h-4 text-rose-400" /> Sign Out &amp; Switch Account
         </button>
       </div>
     );

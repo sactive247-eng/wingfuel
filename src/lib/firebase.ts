@@ -68,4 +68,11 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
+export const ADMIN_EMAILS = ['sactive247@gmail.com'];
+
+export function isAdminUser(user: User | null): boolean {
+  if (!user || !user.email || !user.emailVerified) return false;
+  return ADMIN_EMAILS.includes(user.email.toLowerCase());
+}
+
 export { signInWithPopup, signOut, onAuthStateChanged, type User };

@@ -6,71 +6,116 @@ service cloud.firestore {
     function isSignedIn() {
       return request.auth != null;
     }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email == 'sactive247@gmail.com' && request.auth.token.email_verified == true) ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidVisitorStatsCreate(data) {
+      return data.keys().hasAll(['count', 'updatedAt'])
+        && data.keys().hasOnly(['count', 'updatedAt'])
+        && data.count is int
+        && data.count == 1
+        && data.updatedAt == request.time;
+    }
+
+    function isValidVisitorStatsUpdate(incomingData, existingData) {
+      return incomingData.keys().hasAll(['count', 'updatedAt'])
+        && incomingData.keys().hasOnly(['count', 'updatedAt'])
+        && incomingData.diff(existingData).affectedKeys().hasOnly(['count', 'updatedAt'])
+        && incomingData.count is int
+        && incomingData.count == existingData.count + 1
+        && incomingData.updatedAt == request.time;
+    }
     
     // Default rule: reject all unhandled paths
     match /{document=**} {
       allow read, write: if false;
     }
 
+    // Admin roster (managed exclusively via Firebase Console)
+    match /admins/{adminId} {
+      allow get: if isOwner(adminId) || isAdmin();
+      allow list: if isAdmin();
+      allow write: if false;
+    }
+
     // Articles collection (Aviation Knowledge & Ops)
     match /articles/{articleId} {
-      allow read: if resource.data.status == "published" || isSignedIn();
-      allow write: if isSignedIn();
+      allow read: if resource.data.status == "published" || isAdmin();
+      allow write: if isAdmin();
     }
 
     // News collection (RSS Aggregated Aviation News)
     match /news/{newsId} {
-      allow read: if resource.data.status == "approved" || isSignedIn();
-      allow write: if isSignedIn();
+      allow read: if resource.data.status == "approved" || isAdmin();
+      allow write: if isAdmin();
     }
 
     // News Sources collection
     match /newsSources/{sourceId} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if isAdmin();
     }
 
     // Digital Products collection
     match /products/{productId} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if isAdmin();
     }
 
     // Orders collection (Razorpay payment transactions)
     match /orders/{orderId} {
-      allow read: if isSignedIn() || (resource != null && resource.data.accessKey == request.auth.uid);
+      allow read: if isAdmin() || (isSignedIn() && resource != null && resource.data.accessKey == request.auth.uid);
       allow create: if true;
-      allow update, delete: if isSignedIn();
+      allow update, delete: if isAdmin();
     }
 
     // Jobs collection
     match /jobs/{jobId} {
-      allow read: if resource.data.status == "published" || isSignedIn();
-      allow write: if isSignedIn();
+      allow read: if resource.data.status == "published" || isAdmin();
+      allow write: if isAdmin();
     }
 
     // Subscribers collection
     match /subscribers/{subscriberId} {
       allow create: if true;
-      allow read, update, delete: if isSignedIn();
+      allow read, update, delete: if isAdmin();
     }
 
     // Site Settings collection
     match /siteSettings/{settingId} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if isAdmin();
     }
 
-    // Users collection (User Profiles)
+    // Users collection (User Profiles - PII restricted to owner or admin; no self-assigned roles)
     match /users/{userId} {
-      allow read: if true;
-      allow create, update: if isSignedIn() && request.auth.uid == userId;
-      allow delete: if isSignedIn() && request.auth.uid == userId;
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create, update: if isOwner(userId) && !request.resource.data.keys().hasAny(['role', 'isAdmin', 'admin']);
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // Site Stats collection (Public Visitor Counter - strict atomic +1 increment only)
+    match /siteStats/{statId} {
+      allow get: if statId == 'visitors';
+      allow list: if false;
+      allow create: if statId == 'visitors' && isValidVisitorStatsCreate(request.resource.data);
+      allow update: if statId == 'visitors' && isValidVisitorStatsUpdate(request.resource.data, resource.data);
+      allow delete: if false;
     }
 
     // Activity Logs collection
     match /activityLogs/{logId} {
-      allow read, write: if isSignedIn();
+      allow read, write: if isAdmin();
     }
   }
 }
