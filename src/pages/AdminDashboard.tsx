@@ -1,11 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   ShieldCheck, Lock, LogOut, Check, X, Edit, Trash2, Plus, Sparkles, 
-  RefreshCw, FileText, Newspaper, ShoppingBag, Briefcase, Users, Activity, Settings 
+  RefreshCw, FileText, Newspaper, ShoppingBag, Briefcase, Users, Activity, Settings,
+  Paperclip, Upload, Link2, ExternalLink, Loader2, Mail, KeyRound, Eye, EyeOff
 } from 'lucide-react';
-import { auth, googleProvider, signInWithPopup, signOut, isAdminUser, User } from '../lib/firebase';
-import { Article, NewsItem, DigitalProduct, JobListing } from '../lib/seedData';
+import {
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  sendEmailVerification,
+  EmailAuthProvider,
+  linkWithCredential,
+  updatePassword
+} from 'firebase/auth';
+import { auth, googleProvider, signInWithPopup, signOut, isAdminUser, ADMIN_EMAILS, User } from '../lib/firebase';
+import { Article, ArticleAttachment, NewsItem, DigitalProduct, JobListing } from '../lib/seedData';
 import { DEFAULT_AVIATION_HERO_IMAGE } from '../components/SafeImage';
+
+const MAX_FILE_BYTES = 500 * 1024; // 500 KB per uploaded file (stays safely inside Firestore 1MB doc limit)
+const MAX_TOTAL_BYTES = 650 * 1024; // 650 KB combined uploaded files per article
+
+function formatFileSize(bytes?: number): string {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
 
 interface AdminDashboardProps {
   currentUser: User | null;
@@ -13,7 +32,7 @@ interface AdminDashboardProps {
   news: NewsItem[];
   products: DigitalProduct[];
   jobs: JobListing[];
-  onAddArticle: (art: Article) => void;
+  onAddArticle: (art: Article) => Promise<void> | void;
   onApproveNews: (newsId: string) => void;
   onRejectNews: (newsId: string) => void;
   onAddProduct: (prod: DigitalProduct) => void;
@@ -43,6 +62,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [newArtCategory, setNewArtCategory] = useState<'Aviation Fuel' | 'Airport Operations' | 'Technical Knowledge' | 'Safety & Compliance'>('Aviation Fuel');
   const [newArtSummary, setNewArtSummary] = useState('');
   const [newArtContent, setNewArtContent] = useState('');
+  const [newArtAttachments, setNewArtAttachments] = useState<ArticleAttachment[]>([]);
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [attachmentLinkName, setAttachmentLinkName] = useState('');
+  const [attachmentLinkUrl, setAttachmentLinkUrl] = useState('');
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [articleStatus, setArticleStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [publishingArticle, setPublishingArticle] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // New Product Form
   const [newProdTitle, setNewProdTitle] = useState('');
@@ -57,12 +84,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [newJobApplyUrl, setNewJobApplyUrl] = useState('');
 
   const [authError, setAuthError] = useState<string | null>(null);
+  const [authInfo, setAuthInfo] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
+
   const pendingNews = news.filter((n) => n.status === 'pending');
   const approvedNews = news.filter((n) => n.status === 'approved');
   const isAuthorizedAdmin = isAdminUser(currentUser);
+  const isUnverifiedAdminEmail = Boolean(
+    currentUser &&
+    currentUser.email &&
+    !currentUser.emailVerified &&
+    ADMIN_EMAILS.includes(currentUser.email.toLowerCase())
+  );
 
   const handleAdminSignIn = async () => {
     setAuthError(null);
+    setAuthInfo(null);
+    setAuthLoading(true);
     try {
       const result = await signInWithPopup(auth, googleProvider);
       if (!isAdminUser(result.user)) {
@@ -70,7 +112,94 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       }
     } catch (err: any) {
       console.error('Admin Sign-In Error:', err);
-      setAuthError('Sign in failed: ' + (err?.message || 'Unknown error'));
+      setAuthError('Google sign-in failed: ' + (err?.message || 'Unknown error'));
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleAdminPasswordSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    setAuthInfo(null);
+
+    const trimmedEmail = adminEmail.trim();
+    if (!trimmedEmail || !adminPassword) {
+      setAuthError('Please enter both your Admin ID (email) and password.');
+      return;
+    }
+
+    setAuthLoading(true);
+    try {
+      const result = await signInWithEmailAndPassword(auth, trimmedEmail, adminPassword);
+      setAdminPassword('');
+      if (!isAdminUser(result.user)) {
+        if (result.user.email && ADMIN_EMAILS.includes(result.user.email.toLowerCase()) && !result.user.emailVerified) {
+          setAuthError('Please verify your admin email address to complete sign-in.');
+        } else {
+          setAuthError(`Access denied: ${result.user.email || 'This account'} is not an authorized WingFuel administrator.`);
+        }
+      }
+    } catch (err: any) {
+      console.error('Admin Email/Password Sign-In Error:', err);
+      const code = err?.code || '';
+      if (code === 'auth/operation-not-allowed') {
+        setAuthError('Email/Password sign-in is not enabled yet in Firebase Console. Enable it under Authentication → Sign-in method → Email/Password.');
+      } else if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
+        setAuthError('Invalid Admin ID or password. If you usually sign in with Google, sign in with Google first to set a password under Site Settings, or click "Set / Reset Password".');
+      } else if (code === 'auth/too-many-requests') {
+        setAuthError('Too many failed attempts. Please wait a few minutes or sign in with Google.');
+      } else {
+        setAuthError('Sign in failed: ' + (err?.message || 'Unknown error'));
+      }
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleSendAdminPasswordReset = async () => {
+    setAuthError(null);
+    setAuthInfo(null);
+    const trimmedEmail = adminEmail.trim();
+    if (!trimmedEmail) {
+      setAuthError('Enter your Admin Email ID above first, then click "Set / Reset Password".');
+      return;
+    }
+
+    setAuthLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, trimmedEmail);
+      setAuthInfo(`Password setup/reset email sent to ${trimmedEmail}. Check your inbox (and spam folder) to set a password.`);
+    } catch (err: any) {
+      const code = err?.code || '';
+      if (code === 'auth/operation-not-allowed') {
+        setAuthError('Enable Email/Password sign-in in Firebase Console (Authentication → Sign-in method) before setting a password.');
+      } else {
+        setAuthError(err?.message || 'Could not send password reset email.');
+      }
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleSendAdminVerification = async () => {
+    if (!currentUser) return;
+    setAuthError(null);
+    try {
+      await sendEmailVerification(currentUser);
+      setVerificationSent(true);
+    } catch (err: any) {
+      setAuthError(err?.message || 'Could not send verification email.');
+    }
+  };
+
+  const handleRefreshVerification = async () => {
+    if (!currentUser) return;
+    try {
+      await currentUser.reload();
+      window.location.reload();
+    } catch (err: any) {
+      setAuthError(err?.message || 'Could not refresh account status.');
     }
   };
 
@@ -97,25 +226,146 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  const handleCreateArticleSubmit = (e: React.FormEvent) => {
+  const handleFileAttachmentChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAttachmentError(null);
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const currentTotalBytes = newArtAttachments.reduce(
+      (sum, att) => sum + (att.source === 'file' && att.size ? att.size : 0),
+      0
+    );
+
+    let runningTotal = currentTotalBytes;
+    const added: ArticleAttachment[] = [];
+
+    for (const file of files) {
+      if (file.size > MAX_FILE_BYTES) {
+        setAttachmentError(
+          `"${file.name}" (${formatFileSize(file.size)}) exceeds the 500 KB direct-upload limit. Use "Add External Link" for larger PDFs or spreadsheets.`
+        );
+        continue;
+      }
+      if (runningTotal + file.size > MAX_TOTAL_BYTES) {
+        setAttachmentError(
+          `Total uploaded attachments cannot exceed 650 KB per article. Use "Add External Link" for additional large files.`
+        );
+        break;
+      }
+
+      try {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ''));
+          reader.onerror = () => reject(new Error('Failed to read file'));
+          reader.readAsDataURL(file);
+        });
+        added.push({
+          name: file.name,
+          type: file.type || 'application/octet-stream',
+          size: file.size,
+          url: dataUrl,
+          source: 'file',
+        });
+        runningTotal += file.size;
+      } catch {
+        setAttachmentError(`Could not read file "${file.name}". Please try again.`);
+      }
+    }
+
+    if (added.length > 0) {
+      setNewArtAttachments(prev => [...prev, ...added]);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleAddExternalAttachment = () => {
+    setAttachmentError(null);
+    const trimmedUrl = attachmentLinkUrl.trim();
+    const trimmedName = attachmentLinkName.trim();
+
+    if (!trimmedUrl) {
+      setAttachmentError('Please enter an attachment URL.');
+      return;
+    }
+
+    let parsed: URL;
+    try {
+      parsed = new URL(trimmedUrl);
+    } catch {
+      setAttachmentError('Please enter a valid http:// or https:// URL.');
+      return;
+    }
+
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      setAttachmentError('Only http:// and https:// links are allowed.');
+      return;
+    }
+
+    const fallbackName = parsed.pathname.split('/').filter(Boolean).pop() || parsed.hostname;
+    setNewArtAttachments(prev => [
+      ...prev,
+      {
+        name: trimmedName || decodeURIComponent(fallbackName),
+        type: 'link',
+        url: trimmedUrl,
+        source: 'url',
+      },
+    ]);
+    setAttachmentLinkName('');
+    setAttachmentLinkUrl('');
+    setShowLinkInput(false);
+  };
+
+  const handleRemoveAttachment = (index: number) => {
+    setNewArtAttachments(prev => prev.filter((_, idx) => idx !== index));
+    setAttachmentError(null);
+  };
+
+  const handleCreateArticleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newArtTitle || !newArtContent) return;
-    onAddArticle({
-      id: `art-${Date.now()}`,
-      title: newArtTitle,
-      slug: newArtTitle.toLowerCase().replace(/\s+/g, '-'),
-      category: newArtCategory,
-      summary: newArtSummary || newArtContent.slice(0, 150) + '...',
-      content: newArtContent,
-      author: currentUser?.displayName || 'Authorized Administrator',
-      publishedAt: new Date().toISOString().split('T')[0],
-      readTime: '5 min read',
-      status: 'published'
-    });
-    setNewArtTitle('');
-    setNewArtSummary('');
-    setNewArtContent('');
-    alert('Aviation Knowledge Article Published to Firestore!');
+
+    setPublishingArticle(true);
+    setArticleStatus(null);
+
+    const words = newArtContent.trim().split(/\s+/).filter(Boolean).length;
+    const readMinutes = Math.max(1, Math.ceil(words / 200));
+
+    try {
+      await onAddArticle({
+        id: `art-${Date.now()}`,
+        title: newArtTitle.trim(),
+        slug: newArtTitle.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+        category: newArtCategory,
+        summary: newArtSummary.trim() || newArtContent.trim().slice(0, 150) + '...',
+        content: newArtContent,
+        author: currentUser?.displayName || 'Authorized Administrator',
+        publishedAt: new Date().toISOString().split('T')[0],
+        readTime: `${readMinutes} min read`,
+        status: 'published',
+        ...(newArtAttachments.length > 0 ? { attachments: newArtAttachments } : {}),
+      });
+      setNewArtTitle('');
+      setNewArtSummary('');
+      setNewArtContent('');
+      setNewArtAttachments([]);
+      setAttachmentError(null);
+      setShowLinkInput(false);
+      setArticleStatus({
+        type: 'success',
+        message: 'Aviation Knowledge Article published to Firestore!',
+      });
+    } catch (err: any) {
+      setArticleStatus({
+        type: 'error',
+        message: `Failed to publish article to Firestore: ${err?.message || 'Permission or network error'}`,
+      });
+    } finally {
+      setPublishingArticle(false);
+    }
   };
 
   const handleCreateProductSubmit = (e: React.FormEvent) => {
@@ -163,40 +413,117 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // If not logged in as Admin, show Secure Login Screen
   if (!currentUser) {
     return (
-      <div className="max-w-md mx-auto my-16 p-8 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl space-y-6 text-center">
-        <div className="w-16 h-16 rounded-full bg-orange-950 border border-orange-500/50 text-orange-400 flex items-center justify-center mx-auto shadow-lg">
-          <Lock className="w-8 h-8" />
-        </div>
-
-        <div>
+      <div className="max-w-md mx-auto my-12 p-8 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl space-y-6">
+        <div className="text-center space-y-2">
+          <div className="w-16 h-16 rounded-full bg-orange-950 border border-orange-500/50 text-orange-400 flex items-center justify-center mx-auto shadow-lg">
+            <Lock className="w-8 h-8" />
+          </div>
           <h2 className="text-2xl font-black text-white">WingFuel Administrator Panel</h2>
-          <p className="text-xs text-slate-400 mt-1">Authorized administrator access only for website content and database management.</p>
+          <p className="text-xs text-slate-400">Authorized administrator access only for website content and database management.</p>
         </div>
 
-        <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-300 text-left space-y-2">
+        <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-300 space-y-1.5">
           <div className="flex items-center gap-2 text-orange-400 font-bold">
             <ShieldCheck className="w-4 h-4" /> Protected Firestore Security Rules
           </div>
-          <p>Public visitors and member accounts cannot access admin controls. Only verified administrator accounts are permitted.</p>
+          <p>Sign in with your verified administrator Google account or your Firebase Admin ID &amp; password.</p>
         </div>
 
         {authError && (
-          <div className="p-3 bg-rose-950/60 border border-rose-800/70 rounded-xl text-xs text-rose-300 text-left">
+          <div className="p-3 bg-rose-950/60 border border-rose-800/70 rounded-xl text-xs text-rose-300">
             {authError}
           </div>
         )}
 
+        {authInfo && (
+          <div className="p-3 bg-emerald-950/60 border border-emerald-800/70 rounded-xl text-xs text-emerald-300">
+            {authInfo}
+          </div>
+        )}
+
+        {/* Option 1: Google Sign-In */}
         <button
+          type="button"
           onClick={handleAdminSignIn}
-          className="w-full py-3.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
+          disabled={authLoading}
+          className="w-full py-3.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 disabled:opacity-60 text-white font-bold text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
         >
-          <ShieldCheck className="w-4 h-4" /> Sign In with Firebase Auth (Google)
+          <ShieldCheck className="w-4 h-4" /> Sign In with Google
         </button>
+
+        {/* Divider */}
+        <div className="relative flex items-center justify-center text-[10px] uppercase font-bold text-slate-500">
+          <div className="border-t border-slate-800 w-full" />
+          <span className="bg-slate-900 px-3 shrink-0">or with Admin ID &amp; Password</span>
+          <div className="border-t border-slate-800 w-full" />
+        </div>
+
+        {/* Option 2: Admin Email ID & Password */}
+        <form onSubmit={handleAdminPasswordSignIn} className="space-y-3.5 text-xs">
+          <div>
+            <label className="block text-slate-300 font-semibold mb-1">Admin ID (Email)</label>
+            <div className="relative">
+              <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+              <input
+                type="email"
+                value={adminEmail}
+                onChange={(e) => setAdminEmail(e.target.value)}
+                placeholder="admin@wingfuel.co"
+                autoComplete="username"
+                required
+                className="w-full bg-slate-950 border border-slate-800 focus:border-orange-500 focus:outline-none rounded-xl pl-9 pr-3 py-2.5 text-white"
+              />
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-slate-300 font-semibold">Password</label>
+              <button
+                type="button"
+                onClick={handleSendAdminPasswordReset}
+                disabled={authLoading}
+                className="text-[11px] text-orange-400 hover:text-orange-300 font-semibold"
+              >
+                Set / Reset Password?
+              </button>
+            </div>
+            <div className="relative">
+              <KeyRound className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+              <input
+                type={showAdminPassword ? 'text' : 'password'}
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                placeholder="Enter your password"
+                autoComplete="current-password"
+                required
+                className="w-full bg-slate-950 border border-slate-800 focus:border-orange-500 focus:outline-none rounded-xl pl-9 pr-10 py-2.5 text-white"
+              />
+              <button
+                type="button"
+                onClick={() => setShowAdminPassword(prev => !prev)}
+                className="absolute right-2.5 top-2 p-1 text-slate-400 hover:text-white"
+                aria-label={showAdminPassword ? 'Hide password' : 'Show password'}
+              >
+                {showAdminPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={authLoading}
+            className="w-full py-3 bg-slate-800 hover:bg-slate-700 disabled:opacity-60 text-white font-bold text-xs rounded-xl border border-slate-700 transition-colors flex items-center justify-center gap-2"
+          >
+            {authLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4 text-orange-400" />}
+            Sign In with ID &amp; Password
+          </button>
+        </form>
       </div>
     );
   }
 
-  // If signed in with a non-admin account, block access strictly
+  // If signed in with a non-admin account (or unverified email), block access strictly
   if (!isAuthorizedAdmin) {
     return (
       <div className="max-w-md mx-auto my-16 p-8 bg-slate-900 border border-rose-900/60 rounded-2xl shadow-2xl space-y-6 text-center">
@@ -205,14 +532,49 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
 
         <div className="space-y-1.5">
-          <h2 className="text-2xl font-black text-white">Access Denied</h2>
+          <h2 className="text-2xl font-black text-white">
+            {isUnverifiedAdminEmail ? 'Email Verification Required' : 'Access Denied'}
+          </h2>
           <p className="text-xs text-slate-400">
             Signed in as <strong className="text-slate-200">{currentUser.email || 'Unknown account'}</strong>.
           </p>
           <p className="text-xs text-rose-300 pt-1">
-            This Google account does not have administrator privileges for WingFuel.co.
+            {isUnverifiedAdminEmail
+              ? 'Please verify your email address before accessing administrator controls and Firestore writes.'
+              : 'This account does not have administrator privileges for WingFuel.co.'}
           </p>
         </div>
+
+        {authError && (
+          <div className="p-3 bg-rose-950/60 border border-rose-800/70 rounded-xl text-xs text-rose-300 text-left">
+            {authError}
+          </div>
+        )}
+
+        {verificationSent && (
+          <div className="p-3 bg-emerald-950/60 border border-emerald-800/70 rounded-xl text-xs text-emerald-300 text-left">
+            Verification email sent to {currentUser.email}. Click the link in your inbox, then tap "I've Verified — Refresh".
+          </div>
+        )}
+
+        {isUnverifiedAdminEmail && (
+          <div className="space-y-2.5">
+            <button
+              type="button"
+              onClick={handleSendAdminVerification}
+              className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs rounded-xl transition-colors"
+            >
+              Send Verification Email
+            </button>
+            <button
+              type="button"
+              onClick={handleRefreshVerification}
+              className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 transition-colors"
+            >
+              I&apos;ve Verified &mdash; Refresh
+            </button>
+          </div>
+        )}
 
         <button
           onClick={() => signOut(auth)}
@@ -460,13 +822,183 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               />
             </div>
 
+            {/* Attachments Section */}
+            <div className="text-xs space-y-3 pt-1">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label className="text-slate-300 font-semibold flex items-center gap-1.5">
+                  <Paperclip className="w-3.5 h-3.5 text-orange-400" />
+                  Attachments (Optional — PDF, Docs, Excel, Images, or External Link)
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,.png,.jpg,.jpeg,.webp"
+                    onChange={handleFileAttachmentChange}
+                    className="hidden"
+                    id="article-attachment-input"
+                  />
+                  <label
+                    htmlFor="article-attachment-input"
+                    className="cursor-pointer px-3 py-1.5 bg-slate-950 hover:bg-slate-800 text-slate-200 font-semibold rounded-lg border border-slate-700 transition-colors inline-flex items-center gap-1.5"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-orange-400" /> Upload File
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowLinkInput(prev => !prev);
+                      setAttachmentError(null);
+                    }}
+                    className={`px-3 py-1.5 font-semibold rounded-lg border transition-colors inline-flex items-center gap-1.5 ${
+                      showLinkInput
+                        ? 'bg-orange-500/20 border-orange-500/60 text-orange-300'
+                        : 'bg-slate-950 hover:bg-slate-800 text-slate-200 border-slate-700'
+                    }`}
+                  >
+                    <Link2 className="w-3.5 h-3.5 text-orange-400" /> Add External Link
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-slate-400">
+                Direct uploads support files up to 500 KB each (650 KB total per article). For larger manuals, circulars, or spreadsheets, attach a Google Drive / PDF URL via <strong className="text-slate-300">Add External Link</strong>.
+              </p>
+
+              {showLinkInput && (
+                <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end">
+                  <div className="sm:col-span-4">
+                    <label className="block text-[11px] text-slate-400 font-medium mb-1">Attachment Label</label>
+                    <input
+                      type="text"
+                      value={attachmentLinkName}
+                      onChange={(e) => setAttachmentLinkName(e.target.value)}
+                      placeholder="e.g., DGCA Circular 2026 PDF"
+                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-2 text-white text-xs"
+                    />
+                  </div>
+                  <div className="sm:col-span-6">
+                    <label className="block text-[11px] text-slate-400 font-medium mb-1">Document / File URL</label>
+                    <input
+                      type="url"
+                      value={attachmentLinkUrl}
+                      onChange={(e) => setAttachmentLinkUrl(e.target.value)}
+                      placeholder="https://drive.google.com/... or https://example.com/file.pdf"
+                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-2 text-white text-xs"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <button
+                      type="button"
+                      onClick={handleAddExternalAttachment}
+                      className="w-full py-2 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg transition-colors"
+                    >
+                      Attach
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {attachmentError && (
+                <div className="p-2.5 bg-rose-950/60 border border-rose-800/70 rounded-lg text-rose-300 text-xs">
+                  {attachmentError}
+                </div>
+              )}
+
+              {newArtAttachments.length > 0 && (
+                <div className="space-y-2">
+                  {newArtAttachments.map((att, index) => (
+                    <div
+                      key={`${att.name}-${index}`}
+                      className="flex items-center justify-between gap-3 p-2.5 bg-slate-950 border border-slate-800 rounded-lg"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {att.source === 'url' ? (
+                          <ExternalLink className="w-4 h-4 text-orange-400 shrink-0" />
+                        ) : (
+                          <FileText className="w-4 h-4 text-orange-400 shrink-0" />
+                        )}
+                        <div className="min-w-0">
+                          <div className="text-slate-200 font-semibold truncate">{att.name}</div>
+                          <div className="text-[10px] text-slate-400 font-mono truncate">
+                            {att.source === 'url'
+                              ? att.url
+                              : `${att.type || 'File'}${att.size ? ` · ${formatFileSize(att.size)}` : ''}`}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAttachment(index)}
+                        className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition-colors shrink-0"
+                        title="Remove attachment"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {articleStatus && (
+              <div
+                className={`p-3 rounded-xl border text-xs font-medium ${
+                  articleStatus.type === 'success'
+                    ? 'bg-emerald-950/60 border-emerald-800 text-emerald-300'
+                    : 'bg-rose-950/60 border-rose-800 text-rose-300'
+                }`}
+              >
+                {articleStatus.message}
+              </div>
+            )}
+
             <button
               type="submit"
-              className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs rounded-xl shadow transition-colors"
+              disabled={publishingArticle}
+              className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-bold text-xs rounded-xl shadow transition-colors inline-flex items-center gap-2"
             >
-              Publish Knowledge Article to Firestore
+              {publishingArticle && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              {publishingArticle ? 'Publishing to Firestore...' : 'Publish Knowledge Article to Firestore'}
             </button>
           </form>
+
+          {/* Existing Published Articles Overview */}
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-3">
+            <h4 className="text-sm font-bold text-white uppercase tracking-wider">
+              Published Knowledge Articles ({articles.length})
+            </h4>
+            <div className="space-y-2">
+              {articles.map((art) => (
+                <div
+                  key={art.id}
+                  className="p-3 bg-slate-950 border border-slate-800 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
+                >
+                  <div className="min-w-0">
+                    <div className="font-bold text-white truncate">{art.title}</div>
+                    <div className="text-[11px] text-slate-400 flex flex-wrap items-center gap-2 mt-0.5">
+                      <span className="text-orange-400 font-semibold">{art.category}</span>
+                      <span>&middot;</span>
+                      <span>{art.publishedAt}</span>
+                      {art.attachments && art.attachments.length > 0 && (
+                        <>
+                          <span>&middot;</span>
+                          <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold">
+                            <Paperclip className="w-3 h-3" />
+                            {art.attachments.length} {art.attachments.length === 1 ? 'Attachment' : 'Attachments'}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 self-start sm:self-center shrink-0">
+                    {art.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
@@ -623,6 +1155,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {/* TAB 7: Site Settings & AdMob Configuration */}
       {activeTab === 'settings' && (
         <div className="space-y-6">
+          <AdminPasswordSettingsCard currentUser={currentUser} />
+
           <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-6 text-xs text-slate-300">
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <div>
@@ -669,6 +1203,152 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
+    </div>
+  );
+};
+
+// Sub-component for linking or updating Admin Email/Password login
+const AdminPasswordSettingsCard: React.FC<{ currentUser: User }> = ({ currentUser }) => {
+  const [newPass, setNewPass] = useState('');
+  const [confirmPass, setConfirmPass] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const hasPasswordProvider = currentUser.providerData.some(p => p.providerId === 'password');
+
+  const handleSetAdminPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus(null);
+
+    if (!currentUser.email) {
+      setStatus({ type: 'error', message: 'No email address associated with this admin account.' });
+      return;
+    }
+    if (newPass.length < 8) {
+      setStatus({ type: 'error', message: 'Password must be at least 8 characters long.' });
+      return;
+    }
+    if (newPass !== confirmPass) {
+      setStatus({ type: 'error', message: 'Passwords do not match.' });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      if (hasPasswordProvider) {
+        await updatePassword(currentUser, newPass);
+        setStatus({ type: 'success', message: `Admin password updated for ${currentUser.email}.` });
+      } else {
+        const credential = EmailAuthProvider.credential(currentUser.email, newPass);
+        await linkWithCredential(currentUser, credential);
+        setStatus({
+          type: 'success',
+          message: `Password login enabled for ${currentUser.email}! You can now sign in with either Google or Email + Password.`,
+        });
+      }
+      setNewPass('');
+      setConfirmPass('');
+    } catch (err: any) {
+      const code = err?.code || '';
+      if (code === 'auth/operation-not-allowed') {
+        setStatus({
+          type: 'error',
+          message: 'Enable the Email/Password sign-in provider in Firebase Console (Authentication → Sign-in method → Email/Password) first.',
+        });
+      } else if (code === 'auth/requires-recent-login') {
+        setStatus({
+          type: 'error',
+          message: 'For security, please log out and sign back in with Google before setting or changing your password.',
+        });
+      } else if (code === 'auth/provider-already-linked') {
+        try {
+          await updatePassword(currentUser, newPass);
+          setStatus({ type: 'success', message: `Admin password updated for ${currentUser.email}.` });
+          setNewPass('');
+          setConfirmPass('');
+        } catch (updateErr: any) {
+          setStatus({ type: 'error', message: updateErr?.message || 'Could not update password.' });
+        }
+      } else {
+        setStatus({ type: 'error', message: err?.message || 'Failed to save admin password.' });
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-4 text-xs text-slate-300">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-4">
+        <div>
+          <h3 className="text-base font-bold text-white flex items-center gap-2">
+            <KeyRound className="w-5 h-5 text-orange-400" /> Admin ID &amp; Password Login
+          </h3>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Set or update a Firebase password for <strong className="text-slate-200">{currentUser.email}</strong> to sign in without Google.
+          </p>
+        </div>
+        <span
+          className={`px-3 py-1 rounded-lg font-mono font-bold border ${
+            hasPasswordProvider
+              ? 'bg-emerald-950 text-emerald-400 border-emerald-800'
+              : 'bg-slate-950 text-slate-400 border-slate-700'
+          }`}
+        >
+          {hasPasswordProvider ? 'PASSWORD LINKED' : 'GOOGLE ONLY'}
+        </span>
+      </div>
+
+      <form onSubmit={handleSetAdminPassword} className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+        <div>
+          <label className="block text-slate-300 font-semibold mb-1">
+            {hasPasswordProvider ? 'New Admin Password' : 'Create Admin Password'}
+          </label>
+          <input
+            type="password"
+            value={newPass}
+            onChange={(e) => setNewPass(e.target.value)}
+            placeholder="Minimum 8 characters"
+            minLength={8}
+            required
+            className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white"
+          />
+        </div>
+
+        <div>
+          <label className="block text-slate-300 font-semibold mb-1">Confirm Password</label>
+          <input
+            type="password"
+            value={confirmPass}
+            onChange={(e) => setConfirmPass(e.target.value)}
+            placeholder="Re-enter password"
+            minLength={8}
+            required
+            className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={saving}
+          className="py-2.5 px-5 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-bold rounded-xl shadow transition-colors inline-flex items-center justify-center gap-2"
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+          {hasPasswordProvider ? 'Update Password' : 'Enable Password Login'}
+        </button>
+      </form>
+
+      {status && (
+        <div
+          className={`p-3 rounded-xl border text-xs font-medium ${
+            status.type === 'success'
+              ? 'bg-emerald-950/60 border-emerald-800 text-emerald-300'
+              : 'bg-rose-950/60 border-rose-800 text-rose-300'
+          }`}
+        >
+          {status.message}
+        </div>
+      )}
     </div>
   );
 };

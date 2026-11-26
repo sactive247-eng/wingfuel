@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { BookOpen, Search, Clock, User, ArrowLeft, Bookmark } from 'lucide-react';
-import { Article } from '../lib/seedData';
+import { BookOpen, Search, Clock, User, ArrowLeft, Bookmark, Paperclip, Download, ExternalLink, FileText } from 'lucide-react';
+import { Article, ArticleAttachment } from '../lib/seedData';
 import { AdBanner } from '../components/AdBanner';
 import { useBookmarks } from '../lib/bookmarks';
 import { ReadingProgressBar } from '../components/ReadingProgressBar';
@@ -9,6 +9,20 @@ import {
   resolvePublicImagePath,
   createImageErrorHandler,
 } from '../components/SafeImage';
+
+function isSafeAttachmentUrl(att: ArticleAttachment): boolean {
+  if (att.source === 'file') {
+    return att.url.startsWith('data:');
+  }
+  return att.url.startsWith('https://') || att.url.startsWith('http://');
+}
+
+function formatBytes(bytes?: number): string {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
 
 interface KnowledgePageProps {
   articles: Article[];
@@ -138,6 +152,13 @@ export const KnowledgePage: React.FC<KnowledgePageProps> = ({ articles }) => {
                       <p className="text-xs text-slate-300 line-clamp-3 leading-relaxed mb-4">
                         {art.summary}
                       </p>
+
+                      {art.attachments && art.attachments.length > 0 && (
+                        <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-2.5 py-1 rounded-lg mb-4">
+                          <Paperclip className="w-3 h-3" />
+                          {art.attachments.length} {art.attachments.length === 1 ? 'Attachment' : 'Attachments'}
+                        </div>
+                      )}
                     </div>
 
                     <div className="pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
@@ -196,6 +217,77 @@ export const KnowledgePage: React.FC<KnowledgePageProps> = ({ articles }) => {
             <div className="prose prose-invert max-w-2xl mx-auto text-slate-200 text-sm leading-relaxed space-y-4 whitespace-pre-line font-sans">
               {activeArticle.content}
             </div>
+
+            {/* Article Attachments Section */}
+            {activeArticle.attachments && activeArticle.attachments.length > 0 && (
+              <div className="max-w-2xl mx-auto pt-4 border-t border-slate-800 space-y-3">
+                <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Paperclip className="w-4 h-4 text-orange-400" />
+                  Attached Documents &amp; Resources ({activeArticle.attachments.length})
+                </h2>
+
+                <div className="space-y-3">
+                  {activeArticle.attachments
+                    .filter(isSafeAttachmentUrl)
+                    .map((att, idx) => {
+                      const isImage = att.source === 'file' && att.type.startsWith('image/');
+                      return (
+                        <div
+                          key={`${att.name}-${idx}`}
+                          className="p-3.5 bg-slate-950 border border-slate-800 rounded-xl space-y-3"
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-9 h-9 rounded-lg bg-orange-950/70 border border-orange-800/60 text-orange-400 flex items-center justify-center shrink-0">
+                                {att.source === 'url' ? (
+                                  <ExternalLink className="w-4 h-4" />
+                                ) : (
+                                  <FileText className="w-4 h-4" />
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="text-xs font-bold text-white truncate">{att.name}</div>
+                                <div className="text-[11px] text-slate-400 font-mono truncate">
+                                  {att.source === 'url'
+                                    ? 'External Resource Link'
+                                    : `${att.type || 'Document'}${att.size ? ` · ${formatBytes(att.size)}` : ''}`}
+                                </div>
+                              </div>
+                            </div>
+
+                            {att.source === 'file' ? (
+                              <a
+                                href={att.url}
+                                download={att.name}
+                                className="px-3.5 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded-lg transition-colors inline-flex items-center justify-center gap-1.5 shrink-0"
+                              >
+                                <Download className="w-3.5 h-3.5" /> Download
+                              </a>
+                            ) : (
+                              <a
+                                href={att.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3.5 py-2 bg-slate-800 hover:bg-orange-500 text-white text-xs font-bold rounded-lg border border-slate-700 hover:border-orange-500 transition-colors inline-flex items-center justify-center gap-1.5 shrink-0"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" /> Open Link
+                              </a>
+                            )}
+                          </div>
+
+                          {isImage && (
+                            <img
+                              src={att.url}
+                              alt={att.name}
+                              className="w-full max-h-80 object-contain rounded-lg border border-slate-800 bg-slate-900"
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
 
             <AdBanner type="inline" />
           </article>

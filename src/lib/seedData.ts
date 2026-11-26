@@ -1,3 +1,11 @@
+export interface ArticleAttachment {
+  name: string;
+  type: string;
+  size?: number;
+  url: string;
+  source: 'file' | 'url';
+}
+
 export interface Article {
   id: string;
   title: string;
@@ -11,6 +19,7 @@ export interface Article {
   readTime: string;
   status: 'published' | 'draft';
   coverImage?: string;
+  attachments?: ArticleAttachment[];
 }
 
 export interface NewsItem {

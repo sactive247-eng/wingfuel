@@ -16,7 +16,22 @@
         "publishedAt": { "type": "string" },
         "status": { "type": "string", "enum": ["published", "draft"] },
         "readTime": { "type": "string" },
-        "coverImage": { "type": "string" }
+        "coverImage": { "type": "string" },
+        "attachments": {
+          "type": "array",
+          "description": "Optional downloadable files (data URLs under 500KB) or external document links",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "type": { "type": "string" },
+              "size": { "type": "number" },
+              "url": { "type": "string" },
+              "source": { "type": "string", "enum": ["file", "url"] }
+            },
+            "required": ["name", "type", "url", "source"]
+          }
+        }
       },
       "required": ["title", "category", "content", "status"]
     },

@@ -17,8 +17,8 @@
 - **Active Firebase Project ID**: `wingfuel-1f48d`
 - **Firestore Database ID**: `ai-studio-33914f93-7772-4042-9bdb-353e54c71ad8`
 - **Config File**: `/firebase-applet-config.json` (contains `projectId`, `appId`, `apiKey`, `authDomain`, `firestoreDatabaseId`)
-- **Authentication**: Firebase Auth (Google Sign-In via `signInWithPopup` and Email/Password with User Profiles stored in Firestore `users/{uid}`).
-- **Admin Authorization**: Strictly restricted to verified email `sactive247@gmail.com` (and optional `/admins/{uid}` docs) both in `src/lib/firebase.ts` (`isAdminUser`) and in `firestore.rules` (`isAdmin()`). Other Google accounts are denied Admin Panel access and see a standard Member badge.
+- **Authentication**: Firebase Auth (Google Sign-In via `signInWithPopup` and Email/Password via `signInWithEmailAndPassword` with User Profiles stored in Firestore `users/{uid}`).
+- **Admin Authorization**: Strictly restricted to verified email `sactive247@gmail.com` (and optional `/admins/{uid}` docs) both in `src/lib/firebase.ts` (`isAdminUser`) and in `firestore.rules` (`isAdmin()`). Admin Panel supports both Google Sign-In and Firebase Email ID + Password login (with password linking/update in Admin Site Settings and password reset email support). Other accounts are denied Admin Panel access and see a standard Member badge.
 - **Security Rules File**: `/firestore.rules` (deployed via Firebase CLI / AI Studio).
 - **Deployment CI/CD**: `.github/workflows/firebase-hosting-deploy.yml` (GitHub Actions workflow deploying to Firebase Hosting on push to `main`).
 
@@ -45,10 +45,10 @@
 - Gemini-powered summaries with category filtering ('Fuel', 'Regulations', 'Safety', 'Operations').
 - Favorite/Bookmark toggle saving to `localStorage`.
 
-### 4.3 Aviation Knowledge Base Library (`/src/pages/KnowledgePage.tsx`)
-- Long-form technical articles (QC sampling, hydrant refueling, SAF standards, filter separators).
-- Includes top scroll-based `ReadingProgressBar` component for long articles.
-- Search filter and category tags.
+### 4.3 Aviation Knowledge Base Library (`/src/pages/KnowledgePage.tsx` & `/src/pages/AdminDashboard.tsx`)
+- Long-form technical articles (QC sampling, hydrant refueling, SAF standards, filter separators) persisted to Firestore `/articles/{articleId}` and synced live alongside seed articles.
+- Admin article publisher supports optional attachments: direct file uploads (PDF, Docs, Excel, Images up to 500 KB per file / 650 KB total to stay safely within Firestore's 1 MB document limit) and external HTTPS document links for larger manuals/PDFs.
+- Attachments render with download/open actions and inline image previews inside the article reader view, plus top scroll-based `ReadingProgressBar`, search filter, and category tags.
 
 ### 4.4 Category Alert Preferences (`/src/components/NotificationSettingsModal.tsx`)
 - Users subscribe to specific categories ('Fuel', 'Regulations', etc.).

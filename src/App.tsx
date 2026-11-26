@@ -20,7 +20,8 @@ import { AboutPage } from './pages/AboutPage';
 import { AdminDashboard } from './pages/AdminDashboard';
 
 // Firebase & Initial Seed Data
-import { auth, onAuthStateChanged, User, testFirestoreConnection } from './lib/firebase';
+import { collection, doc, onSnapshot, query, setDoc, where } from 'firebase/firestore';
+import { auth, db, onAuthStateChanged, User, testFirestoreConnection, handleFirestoreError, OperationType } from './lib/firebase';
 import { 
   INITIAL_ARTICLES, INITIAL_NEWS, INITIAL_PRODUCTS, INITIAL_JOBS,
   Article, NewsItem, DigitalProduct, JobListing 
@@ -34,6 +35,12 @@ export default function App() {
   const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
   const [userAuthModalOpen, setUserAuthModalOpen] = useState(false);
   const [userAuthMode, setUserAuthMode] = useState<'signin' | 'signup'>('signup');
+
+  // Application Data State
+  const [articles, setArticles] = useState<Article[]>(INITIAL_ARTICLES);
+  const [news, setNews] = useState<NewsItem[]>(INITIAL_NEWS);
+  const [products, setProducts] = useState<DigitalProduct[]>(INITIAL_PRODUCTS);
+  const [jobs, setJobs] = useState<JobListing[]>(INITIAL_JOBS);
 
   // Theme state: dark mode default, persisted in localStorage
   const [isDark, setIsDark] = useState<boolean>(() => {
@@ -53,9 +60,50 @@ export default function App() {
 
   useEffect(() => {
     testFirestoreConnection();
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
     });
+
+    // Subscribe to published Knowledge Articles in Firestore and merge with seed articles
+    const articlesQuery = query(
+      collection(db, 'articles'),
+      where('status', '==', 'published')
+    );
+    const unsubscribeArticles = onSnapshot(
+      articlesQuery,
+      (snapshot) => {
+        const firestoreArticles: Article[] = snapshot.docs.map((docSnap) => {
+          const data = docSnap.data() as Partial<Article>;
+          return {
+            id: docSnap.id,
+            title: data.title || 'Untitled Article',
+            slug: data.slug || docSnap.id,
+            category: data.category || 'Aviation Fuel',
+            subCategory: data.subCategory,
+            summary: data.summary || '',
+            content: data.content || '',
+            author: data.author || 'WingFuel Editorial',
+            publishedAt: data.publishedAt || new Date().toISOString().split('T')[0],
+            readTime: data.readTime || '5 min read',
+            status: 'published',
+            coverImage: data.coverImage,
+            attachments: Array.isArray(data.attachments) ? data.attachments : undefined,
+          };
+        });
+
+        firestoreArticles.sort((a, b) => (b.publishedAt || '').localeCompare(a.publishedAt || ''));
+
+        const seenIds = new Set(firestoreArticles.map((a) => a.id));
+        const merged = [
+          ...firestoreArticles,
+          ...INITIAL_ARTICLES.filter((seed) => !seenIds.has(seed.id)),
+        ];
+        setArticles(merged);
+      },
+      (error) => {
+        console.warn('Firestore articles listener fallback to local seed data:', error.message);
+      }
+    );
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -66,7 +114,8 @@ export default function App() {
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      unsubscribe();
+      unsubscribeAuth();
+      unsubscribeArticles();
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
@@ -82,8 +131,31 @@ export default function App() {
   };
 
   // Handlers for Admin mutations
-  const handleAddArticle = (art: Article) => {
-    setArticles(prev => [art, ...prev]);
+  const handleAddArticle = async (art: Article) => {
+    const payload: Record<string, unknown> = {
+      id: art.id,
+      title: art.title,
+      slug: art.slug,
+      category: art.category,
+      summary: art.summary,
+      content: art.content,
+      author: art.author,
+      publishedAt: art.publishedAt,
+      readTime: art.readTime,
+      status: art.status,
+    };
+    if (art.subCategory) payload.subCategory = art.subCategory;
+    if (art.coverImage) payload.coverImage = art.coverImage;
+    if (art.attachments && art.attachments.length > 0) {
+      payload.attachments = art.attachments;
+    }
+
+    try {
+      await setDoc(doc(db, 'articles', art.id), payload);
+      setArticles(prev => [art, ...prev.filter(item => item.id !== art.id)]);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `articles/${art.id}`);
+    }
   };
 
   const handleApproveNews = (newsId: string) => {
@@ -101,12 +173,6 @@ export default function App() {
   const handleAddJob = (job: JobListing) => {
     setJobs(prev => [job, ...prev]);
   };
-
-  // Application Data State
-  const [articles, setArticles] = useState<Article[]>(INITIAL_ARTICLES);
-  const [news, setNews] = useState<NewsItem[]>(INITIAL_NEWS);
-  const [products, setProducts] = useState<DigitalProduct[]>(INITIAL_PRODUCTS);
-  const [jobs, setJobs] = useState<JobListing[]>(INITIAL_JOBS);
 
   return (
     <div className="min-h-screen max-w-full overflow-x-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 flex flex-col font-sans selection:bg-orange-500 selection:text-white transition-colors duration-200">
